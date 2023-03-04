@@ -1,0 +1,115 @@
+<html>
+
+<head>
+    <title>Device Motion</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body>
+    <button onclick="requestPermission()">Request Permission</button>
+    <br>
+    <p id="msg">Log</p>
+
+    <script>
+        var timer = 0.0;
+        var d = {
+            x: 0,
+            y: 0,
+            z: 0,
+            rx: 0,
+            ry: 0,
+            rz: 0,
+            interval: 0
+        }
+
+        function motion(event) {
+            let data = {
+                x: event.acceleration.x,
+                y: event.acceleration.y,
+                z: event.acceleration.z,
+                //rotationRate
+                rx: event.rotationRate.alpha,
+                ry: event.rotationRate.beta,
+                rz: event.rotationRate.gamma,
+                interval: event.interval
+            }
+
+            /*
+            d.x += data.x;
+            d.y += data.y;
+            d.z += data.z;
+            d.rx += data.rx;
+            d.ry += data.ry;
+            d.rz += data.rz;
+            d.interval += data.interval;
+
+            timer += data.interval;
+            if (timer > 0.1) {
+                timer = 0.0;
+            } else {
+                return;
+            }
+             */
+
+            const threshold = 30;
+            if (Math.abs(data.x) > threshold || Math.abs(data.y) > threshold || Math.abs(data.z) > threshold) {
+                d.x += data.x;
+                d.y += data.y;
+                d.z += data.z;
+                d.rx += data.rx;
+                d.ry += data.ry;
+                d.rz += data.rz;
+                d.interval += data.interval;
+            } else {
+                return;
+            }
+
+            //log
+            document.getElementById("msg").innerHTML = "x: " + d.x + "<br>y: " + d.y + "<br>z: " + d.z + "<br>rx: " + d.rx + "<br>ry: " + d.ry + "<br>rz: " + d.rz + "<br>interval: " + d.interval;
+
+            //post data
+            fetch('/data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+
+            d.x = 0;
+            d.y = 0;
+            d.z = 0;
+            d.rx = 0;
+            d.ry = 0;
+            d.rz = 0;
+            d.interval = 0;
+        }
+
+        if (!window.DeviceMotionEvent) {
+            document.getElementById("msg").innerHTML += "<br>DeviceMotionEvent is not supported";
+        }
+
+        function requestPermission() {
+            if (typeof DeviceMotionEvent.requestPermission === 'function') {
+                DeviceMotionEvent.requestPermission()
+                    .then(permissionState => {
+                        document.getElementById("msg").innerHTML += '<br>' + permissionState;
+
+                        if (permissionState == 'granted') {
+                            if (window.DeviceMotionEvent) {
+                                window.addEventListener("devicemotion", motion, false);
+                            } else {
+                                //change msg
+                                document.getElementById("msg").innerHTML += "<br>DeviceMotionEvent is not supported";
+                            }
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                // handle regular non iOS 13+ devices
+            }
+        }
+    </script>
+</body>
+
+</html>
